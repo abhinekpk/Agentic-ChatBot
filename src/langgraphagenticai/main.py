@@ -4,6 +4,10 @@ from src.langgraphagenticai.LLMS.groqllm import GroqLLM
 from src.langgraphagenticai.graph.graph_builder import GraphBuilder
 from src.langgraphagenticai.ui.streamlitui.display_result import DisplayResultStreamlit
 
+def _is_tool_use_failed(error: Exception) -> bool:
+    error_text = str(error)
+    return "tool_use_failed" in error_text or "Failed to call a function" in error_text
+
 def load_langgraph_agenticai_app():
     """
     Loads and runs the LangGraph AgenticAI application with Streamlit UI.
@@ -21,7 +25,10 @@ def load_langgraph_agenticai_app():
         st.error("Error: Failed to load user input from the UI.")
         return
     
-    user_message = st.chat_input("Enter your message:")
+    if st.session_state.IsFetchButtonClicked:
+        user_message = st.session_state.time_frame
+    else:
+        user_message = st.chat_input("Enter your message here")
 
     if user_message:
         try:
@@ -45,13 +52,28 @@ def load_langgraph_agenticai_app():
             graph_builder=GraphBuilder(model)
             try:
                  graph=graph_builder.setup_graph(usecase)
-                 print(user_message)
-                 DisplayResultStreamlit(usecase,graph,user_message).display_result_on_ui()
             except Exception as e:
                  st.error(f"Error: Graph set up failed- {e}")
                  return
+
+            try:
+                 print(user_message)
+                 DisplayResultStreamlit(usecase,graph,user_message).display_result_on_ui()
+            except Exception as e:
+                 if usecase == "Chatbot with Tools" and _is_tool_use_failed(e):
+                     st.warning("Tool call failed for this prompt. Retrying without tools.")
+                     try:
+                         fallback_graph = GraphBuilder(model).setup_graph("Basic Chatbot")
+                         DisplayResultStreamlit("Basic Chatbot", fallback_graph, user_message).display_result_on_ui()
+                         return
+                     except Exception as fallback_error:
+                         st.error(f"Error: Tool call failed and fallback failed- {fallback_error}")
+                         return
+
+                 st.error(f"Error: Response generation failed- {e}")
+                 return
         
         except Exception as e:
-             st.error(f"Error: Graph set up failed- {e}")
+             st.error(f"Error: App execution failed- {e}")
              return
            

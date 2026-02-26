@@ -11,6 +11,8 @@ class LoadStreamlitUI:
     def load_streamlit_ui(self):
         st.set_page_config(page_title= "🤖 " + self.config.get_page_title(), layout="wide")
         st.header("🤖 " + self.config.get_page_title())
+        st.session_state.IsFetchButtonClicked=False
+        st.session_state.time_frame=''
 
 
         with st.sidebar:
@@ -41,15 +43,16 @@ class LoadStreamlitUI:
                     st.warning("⚠️ Please enter your Tavily API key to proceed. Don't have? refer : https://app.tavily.com/home ")
             
             if self.user_controls["selected_usecase"]== "AI News":
-                st.subheader("News Preferences")
+                st.subheader("📰 News Preferences")
 
                 with st.sidebar:
                     time_frame = st.selectbox(
-                        "Select Time Frame",
-                        ["Dayily", "Weekly", "Monthly"],
+                        "📅 Select Time Frame",
+                        ["Daily", "Weekly", "Monthly"],
                         index=0
                     )
-                if st.button("Set Preferences" , use_container_width=True ):
-                    set.session.time_frame = time_frame
+                if st.button("🔍 Latest News" , use_container_width=True ):
+                    st.session_state.IsFetchButtonClicked=True
+                    st.session_state.time_frame = time_frame
 
         return self.user_controls
